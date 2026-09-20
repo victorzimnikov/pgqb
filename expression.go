@@ -1,32 +1,32 @@
 package pgqb
 
-import "strings"
-
-func quoteIdent(s string) string {
-	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
-}
-
-type SelectExpr struct {
+type Expression struct {
 	sql string
 }
 
-func Column(name string) SelectExpr {
-	return SelectExpr{
+func ClockTimestamp() Expression {
+	return Expression{
+		sql: "clock_timestamp()",
+	}
+}
+
+func Column(name string) Expression {
+	return Expression{
 		sql: quoteIdent(name),
 	}
 }
 
-func CastField(field string, fieldTypes ...FieldType) (SelectExpr, error) {
+func CastField(field string, fieldTypes ...FieldType) (Expression, error) {
 	result := quoteIdent(field)
 
 	for _, fieldType := range fieldTypes {
 		typeSql, err := fieldType.sql()
 		if err != nil {
-			return SelectExpr{}, err
+			return Expression{}, err
 		}
 
 		result += "::" + typeSql
 	}
 
-	return SelectExpr{sql: result}, nil
+	return Expression{sql: result}, nil
 }

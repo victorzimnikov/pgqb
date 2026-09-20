@@ -5,16 +5,6 @@ import (
 	"strings"
 )
 
-type buildContext struct {
-	args []any
-}
-
-func (c *buildContext) bind(value any) string {
-	c.args = append(c.args, value)
-
-	return fmt.Sprintf("$%d", len(c.args))
-}
-
 type SelectBuilder struct {
 	Builder
 
@@ -22,7 +12,7 @@ type SelectBuilder struct {
 	limit   int
 	offset  int
 	where   whereCause
-	fields  []SelectExpr
+	fields  []Expression
 	orderBy []string
 
 	lockTables        []string
@@ -32,7 +22,7 @@ type SelectBuilder struct {
 	err error
 }
 
-func (b *Builder) Select(table string, fields ...SelectExpr) *SelectBuilder {
+func (b *Builder) Select(table string, fields ...Expression) *SelectBuilder {
 	return &SelectBuilder{
 		table:   table,
 		fields:  fields,
@@ -41,18 +31,30 @@ func (b *Builder) Select(table string, fields ...SelectExpr) *SelectBuilder {
 }
 
 func (b *SelectBuilder) Where(field string, arg any) *SelectBuilder {
+	if b.err != nil {
+		return b
+	}
+
 	b.where.add(field, arg)
 
 	return b
 }
 
 func (b *SelectBuilder) WhereNull(field string) *SelectBuilder {
+	if b.err != nil {
+		return b
+	}
+
 	b.where.add(field, nil)
 
 	return b
 }
 
 func (b *SelectBuilder) WhereOr(build func(*SelectBuilder)) *SelectBuilder {
+	if b.err != nil {
+		return b
+	}
+
 	group := new(SelectBuilder)
 	build(group)
 
@@ -62,12 +64,20 @@ func (b *SelectBuilder) WhereOr(build func(*SelectBuilder)) *SelectBuilder {
 }
 
 func (b *SelectBuilder) Limit(limit int) *SelectBuilder {
+	if b.err != nil {
+		return b
+	}
+
 	b.limit = limit
 
 	return b
 }
 
 func (b *SelectBuilder) Offset(offset int) *SelectBuilder {
+	if b.err != nil {
+		return b
+	}
+
 	b.offset = offset
 
 	return b
