@@ -2,7 +2,6 @@ package pgqb
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -52,31 +51,14 @@ func (b *InsertBuilder) Exec(values ...any) (pgconn.CommandTag, error) {
 		return pgconn.CommandTag{}, fmt.Errorf("fields is required")
 	}
 
-	fields := ""
-
-	if len(b.fields) > 0 {
-		for _, field := range b.fields {
-			if fields == "" {
-				fields = quoteIdent(field)
-			} else {
-				fields += ", " + quoteIdent(field)
-			}
-		}
-	}
-
 	buildCtx := &buildContext{}
 
-	valuesString := ""
-
-	for _, value := range values {
-		if valuesString == "" {
-			valuesString = buildCtx.bind(value)
-		} else {
-			valuesString += ", " + buildCtx.bind(value)
-		}
-	}
-
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", quoteIdent(b.table), fields, valuesString)
+	query := fmt.Sprintf(
+		"INSERT INTO %s (%s) VALUES (%s)",
+		quoteIdent(b.table),
+		quoteIdentSlice(b.fields),
+		bindSlice(buildCtx, values),
+	)
 	query += b.buildConflictClause()
 
 	return b.db.Exec(b.ctx, query, buildCtx.args...)
@@ -91,11 +73,5 @@ func (b *InsertBuilder) buildConflictClause() string {
 		return " ON CONFLICT DO NOTHING"
 	}
 
-	fields := make([]string, len(b.conflictFields))
-
-	for i, field := range b.conflictFields {
-		fields[i] = quoteIdent(field)
-	}
-
-	return fmt.Sprintf(" ON CONFLICT (%s) DO NOTHING", strings.Join(fields, ", "))
+	return fmt.Sprintf(" ON CONFLICT (%s) DO NOTHING", quoteIdentSlice(b.conflictFields))
 }

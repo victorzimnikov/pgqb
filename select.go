@@ -203,13 +203,7 @@ func (b *SelectBuilder) Exec(dest ...any) error {
 	fields := "*"
 
 	if len(b.fields) > 0 {
-		for _, field := range b.fields {
-			if fields == "*" {
-				fields = field.sql
-			} else {
-				fields += ", " + field.sql
-			}
-		}
+		fields = joinExpressionSlice(b.fields)
 	}
 
 	query := fmt.Sprintf("SELECT %s FROM %s", fields, quoteIdent(b.table))
@@ -237,17 +231,12 @@ func (b *SelectBuilder) Exec(dest ...any) error {
 
 	if b.lockMode != "" {
 		if len(b.lockTables) > 0 {
-			tables := ""
-
-			for _, tableName := range b.lockTables {
-				if tables == "" {
-					tables += quoteIdent(tableName)
-				} else {
-					tables += ", " + quoteIdent(tableName)
-				}
-			}
-
-			query = fmt.Sprintf("%s FOR %s OF %s", query, b.lockMode, tables)
+			query = fmt.Sprintf(
+				"%s FOR %s OF %s",
+				query,
+				b.lockMode,
+				quoteIdentSlice(b.lockTables),
+			)
 		} else {
 			query = fmt.Sprintf("%s FOR %s", query, b.lockMode)
 		}
