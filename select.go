@@ -2,7 +2,6 @@ package pgqb
 
 import (
 	"fmt"
-	"strings"
 )
 
 type SelectBuilder struct {
@@ -217,35 +216,10 @@ func (b *SelectBuilder) Exec(dest ...any) error {
 		query += " " + whereSQL
 	}
 
-	if len(b.orderBy) > 0 {
-		query = query + " ORDER BY " + strings.Join(b.orderBy, ", ")
-	}
-
-	if b.limit != 0 {
-		query = fmt.Sprintf("%s LIMIT %s", query, buildCtx.bind(b.limit))
-	}
-
-	if b.offset != 0 {
-		query = fmt.Sprintf("%s OFFSET %s", query, buildCtx.bind(b.offset))
-	}
-
-	if b.lockMode != "" {
-		if len(b.lockTables) > 0 {
-			query = fmt.Sprintf(
-				"%s FOR %s OF %s",
-				query,
-				b.lockMode,
-				quoteIdentSlice(b.lockTables),
-			)
-		} else {
-			query = fmt.Sprintf("%s FOR %s", query, b.lockMode)
-		}
-
-		if b.lockModeBehaviour != "" {
-			query = fmt.Sprintf("%s %s", query, b.lockModeBehaviour)
-		}
-
-	}
+	query += b.buildOrderByCause()
+	query += b.buildLimitCause(buildCtx)
+	query += b.buildOffsetCause(buildCtx)
+	query += b.buildLockCause()
 
 	return b.db.QueryRow(b.ctx, query, buildCtx.args...).Scan(dest...)
 }
