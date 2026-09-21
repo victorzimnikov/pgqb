@@ -2,6 +2,7 @@ package pgqb
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -13,6 +14,9 @@ type InsertBuilder struct {
 
 	fields []string
 
+	conflictType   InsertConflictType
+	conflictFields []string
+
 	err error
 }
 
@@ -22,6 +26,17 @@ func (b *Builder) Insert(table string, fields ...string) *InsertBuilder {
 		fields:  fields,
 		Builder: *b,
 	}
+}
+
+func (b *InsertBuilder) ConflictNothing(fields ...string) *InsertBuilder {
+	if b.err != nil {
+		return b
+	}
+
+	b.conflictType = DoNothingConflict
+	b.conflictFields = append(b.conflictFields, fields...)
+
+	return b
 }
 
 func (b *InsertBuilder) Exec(values ...any) (pgconn.CommandTag, error) {
@@ -62,6 +77,25 @@ func (b *InsertBuilder) Exec(values ...any) (pgconn.CommandTag, error) {
 	}
 
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", quoteIdent(b.table), fields, valuesString)
+	query += b.buildConflictClause()
 
 	return b.db.Exec(b.ctx, query, buildCtx.args...)
+}
+
+func (b *InsertBuilder) buildConflictClause() string {
+	if b.conflictType == 0 {
+		return ""
+	}
+
+	if len(b.conflictFields) == 0 {
+		return " ON CONFLICT DO NOTHING"
+	}
+
+	fields := make([]string, len(b.conflictFields))
+
+	for i, field := range b.conflictFields {
+		fields[i] = quoteIdent(field)
+	}
+
+	return fmt.Sprintf(" ON CONFLICT (%s) DO NOTHING", strings.Join(fields, ", "))
 }

@@ -2,6 +2,12 @@ package pgqb
 
 import "fmt"
 
+type InsertConflictType uint8
+
+const (
+	DoNothingConflict InsertConflictType = iota + 1
+)
+
 type FieldType uint8
 
 const (
