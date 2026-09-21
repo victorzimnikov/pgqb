@@ -124,7 +124,7 @@ func (b *UpdateBuilder) Exec() (pgconn.CommandTag, error) {
 	}
 
 	if len(b.fields) == 0 {
-		return pgconn.CommandTag{}, fmt.Errorf("Fields is required")
+		return pgconn.CommandTag{}, fmt.Errorf("fields is required")
 	}
 
 	query := fmt.Sprintf("UPDATE %s SET %s", quoteIdent(b.table), strings.Join(b.fields, ", "))
